@@ -1,17 +1,22 @@
 #!/bin/sh
 set -e
 
+# --- Minimal startup: start Node foreground immediately (for Cloud Run TCP probe) ---
+# sshd is optional; start it in background after Node has begun listening.
+
 SSH_USER="${SSH_USER:-n4}"
 SSH_PORT="${BACKEND_PORT:-2222}"
 AUTH_KEY_FILE="/home/$SSH_USER/.ssh/authorized_keys"
 
-# 1) Start Node server first → Cloud Run health passes quickly
+# 1) Start Node (foreground) quickly
 node server.js &
 NODE_PID=$!
 
-# 2) Prepare sshd in background
+# 2) Prepare & start sshd (background)
 (
   set -e
+  apk info | grep -qi openssh || true
+
   ssh-keygen -A
   mkdir -p /var/empty/sshd /var/run/sshd
   chmod 755 /var/empty/sshd
@@ -19,6 +24,7 @@ NODE_PID=$!
   if ! id "$SSH_USER" >/dev/null 2>&1; then
     adduser -D -h "/home/$SSH_USER" "$SSH_USER"
   fi
+
   mkdir -p "/home/$SSH_USER/.ssh"
   chmod 700 "/home/$SSH_USER/.ssh"
   chown -R "$SSH_USER:$SSH_USER" "/home/$SSH_USER"
@@ -28,8 +34,9 @@ NODE_PID=$!
   elif [ -f "/app/authorized_keys" ]; then
     cp /app/authorized_keys "$AUTH_KEY_FILE"
   else
-    echo "# empty" > "$AUTH_KEY_FILE"
+    echo "# provide SSH_AUTHKEY or authorized_keys" > "$AUTH_KEY_FILE"
   fi
+
   chmod 600 "$AUTH_KEY_FILE"
   chown "$SSH_USER:$SSH_USER" "$AUTH_KEY_FILE"
 
@@ -39,9 +46,9 @@ NODE_PID=$!
   sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config || true
   echo "PermitRootLogin no" >> /etc/ssh/sshd_config
 
-  /usr/sbin/sshd -t || echo "⚠️ sshd config test warning"
+  /usr/sbin/sshd -t || echo "⚠️ sshd -t warnings"
   /usr/sbin/sshd -D -e
 ) &
 
-# 3) Keep Node in foreground
+# keep container alive on Node
 wait "$NODE_PID"
