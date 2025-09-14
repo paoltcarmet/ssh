@@ -1,0 +1,5 @@
+---
+
+### `authorized_keys`
+```text
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL1kOmqbQIS6hF/HuKEvmNDUTqGTiSfcbYMH6vtoJ/g3 n4ssh-client
