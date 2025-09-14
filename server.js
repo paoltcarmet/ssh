@@ -2,9 +2,9 @@ import http from "http";
 import net from "net";
 import { WebSocketServer } from "ws";
 
-const PORT = process.env.PORT || 8080;
+const PORT = Number(process.env.PORT || 8080);
 const BACKEND_HOST = process.env.BACKEND_HOST || "127.0.0.1";
-const BACKEND_PORT = parseInt(process.env.BACKEND_PORT || "2222", 10);
+const BACKEND_PORT = Number(process.env.BACKEND_PORT || 2222);
 const WS_PATH = process.env.WS_PATH || "/app53";
 
 const server = http.createServer((req, res) => {
@@ -30,6 +30,11 @@ wss.on("connection", (ws) => {
     sock.on("close", () => { try { ws.close(); } catch {} });
     sock.on("error", () => { try { ws.close(); } catch {} });
   });
+
+  sock.on("error", (e) => {
+    try { ws.close(); } catch {}
+    console.error("TCP error:", e?.message || e);
+  });
 });
 
 server.on("upgrade", (req, socket, head) => {
@@ -44,7 +49,7 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ HTTP :${PORT} | WS ${WS_PATH} | SSH -> ${BACKEND_HOST}:${BACKEND_PORT}`);
+  console.log(`READY: http://0.0.0.0:${PORT}  WS ${WS_PATH}  SSH -> ${BACKEND_HOST}:${BACKEND_PORT}`);
 });
 
 process.on("uncaughtException", (e) => console.error("UNCAUGHT", e));
