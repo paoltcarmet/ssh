@@ -43,6 +43,9 @@ server.on("upgrade", (req, socket, head) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`HTTP :${PORT} | WS ${WS_PATH} | SSH -> ${BACKEND_HOST}:${BACKEND_PORT}`);
 });
+
+process.on("uncaughtException", (e) => console.error("UNCAUGHT", e));
+process.on("unhandledRejection", (e) => console.error("UNHANDLED", e));
